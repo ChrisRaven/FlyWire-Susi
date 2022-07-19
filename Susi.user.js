@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Suzi
+// @name         Susi
 // @namespace    KrzysztofKruk-FlyWire
 // @version      0.1
 // @description  Helps with resolving misalignments
