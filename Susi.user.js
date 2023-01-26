@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Susi
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.1
+// @version      0.1.0.1
 // @description  Helps with resolving misalignments
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
+// @match        https://proofreading.flywire.ai/*
 // @grant        none
 // @updateURL    https://raw.githubusercontent.com/ChrisRaven/FlyWire-Susi/main/Susi.user.js
 // @downloadURL  https://raw.githubusercontent.com/ChrisRaven/FlyWire-Susi/main/Susi.user.js
