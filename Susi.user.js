@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Susi
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.1.1
+// @version      0.1.1.1
 // @description  Helps with resolving misalignments
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -121,7 +121,7 @@ function drawImageFromBlob(blob, snapshot) {
 
     tgt.style.width = srcWidth / 2 + 'px'
     tgt.style.height = srcHeight + 'px'
-    tgt.style.left = viewportOffset.left + (snapshot ? 0 : (srcWidth / 2 - 5)) + 'px'
+    tgt.style.left = viewportOffset.left + (snapshot ? -1 : (srcWidth / 2 - 5)) + 'px'
     tgt.style.top = viewportOffset.top + 'px'
     tgt.style.opacity = document.getElementById('susi-opacity')?.value || 0.8
   }
