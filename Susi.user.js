@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Susi
 // @namespace    KrzysztofKruk-FlyWire
-// @version      0.1.0.2
+// @version      0.1.1
 // @description  Helps with resolving misalignments
 // @author       Krzysztof Kruk
 // @match        https://ngl.flywire.ai/*
@@ -37,7 +37,10 @@ function main() {
     html: generateHTML(),
     events: {
       '#susi-buttons .capture': {
-        click: capture
+        click: capture.bind(this, false)
+      },
+      '#susi-buttons .snapshot': {
+        click: capture.bind(this, true)
       },
       '#susi-buttons .toggle': {
         click: toggle
@@ -53,6 +56,18 @@ function main() {
   })
 
   readFromLS()
+
+  // both src and storage are meant to be global variables, but have to be declared when everything else is ready
+  src = viewer.display.canvas
+  storage = window.Sifrr.Storage.getStorage('indexeddb')
+  storage.get('susi-snapshot').then(res => {
+    const blob = res['susi-snapshot']
+    if (blob) {
+      drawImageFromBlob(blob, true)
+      changeButtonsAvailability(true)
+      toggle()
+    }
+  })
 }
 
 
@@ -68,44 +83,17 @@ let isVisible = false
 let imageId = 'kk-utilities-compare-image'
 
 
-function capture() {
-  let src = viewer.display.canvas
-  let srcCtx = viewer.display.gl
-  let srcComputedStyles = getComputedStyle(src)
-  let viewportOffset = src.getBoundingClientRect()
-  let rightSideBarWidth = parseInt(document.getElementsByClassName('ngSidebarHeader')[0].style.width, 10)
-  
+function capture(snapshot = false) {
   // to schedule redraw and fill the buffer, from which the redraw will happen
   viewer.display.scheduleRedraw()
   // to add our code before the Neuroglancer code executes the redraw (FIFO) and clears the buffer
   requestAnimationFrame(() => {
     src.toBlob(blob => {
-      let srcWidth = parseInt(srcComputedStyles.getPropertyValue('width'), 10) - rightSideBarWidth
-      let srcHeight = parseInt(srcComputedStyles.getPropertyValue('height'), 10)
-      let tgt = document.getElementById(imageId)
-      if (!tgt) {
-        tgt = document.createElement('canvas')
-        tgt.id = imageId
-        tgt.width = srcWidth / 2
-        tgt.height = srcHeight
+      drawImageFromBlob(blob, snapshot)
 
-        tgt.style.width = srcWidth / 2 + 'px'
-        tgt.style.height = srcHeight + 'px'
-        tgt.style.left = viewportOffset.left + srcWidth / 2 - 5 + 'px'
-        tgt.style.top = viewportOffset.top + 'px'
-        tgt.style.opacity = document.getElementById('susi-opacity')?.value || 0.8
+      if (snapshot) {
+        storage.set('susi-snapshot', { value: blob })
       }
-
-      let url = URL.createObjectURL(blob)
-      let tempImg = document.createElement('img')
-      tempImg.onload = function() {
-        
-        URL.revokeObjectURL(url)
-        tgt.getContext('2d').drawImage(this, 0, 0, srcWidth / 2 + 5, srcHeight, 0, 0, srcWidth / 2 + 5, srcHeight)
-        tempImg.remove()
-      };
-      tempImg.src = url
-      document.body.appendChild(tgt)
     })
   });
 
@@ -113,6 +101,42 @@ function capture() {
   changeButtonsAvailability(true)
   updateToggleButton()
   updateToggleState()
+}
+
+function drawImageFromBlob(blob, snapshot) {
+  
+  let srcCtx = viewer.display.gl
+  let srcComputedStyles = getComputedStyle(src)
+  let viewportOffset = src.getBoundingClientRect()
+  let rightSideBarWidth = parseInt(document.getElementsByClassName('ngSidebarHeader')[0].style.width, 10)
+  let srcWidth = parseInt(srcComputedStyles.getPropertyValue('width'), 10) - rightSideBarWidth
+  let srcHeight = parseInt(srcComputedStyles.getPropertyValue('height'), 10)
+  let tgt = document.getElementById(imageId)
+
+  if (!tgt) {
+    tgt = document.createElement('canvas')
+    tgt.id = imageId
+    tgt.width = srcWidth / 2
+    tgt.height = srcHeight
+
+    tgt.style.width = srcWidth / 2 + 'px'
+    tgt.style.height = srcHeight + 'px'
+    tgt.style.left = viewportOffset.left + (snapshot ? 0 : (srcWidth / 2 - 5)) + 'px'
+    tgt.style.top = viewportOffset.top + 'px'
+    tgt.style.opacity = document.getElementById('susi-opacity')?.value || 0.8
+  }
+
+  let url = URL.createObjectURL(blob)
+
+  let tempImg = document.createElement('img')
+  tempImg.onload = function() {
+    
+    URL.revokeObjectURL(url)
+    tgt.getContext('2d').drawImage(this, 0, 0, srcWidth / 2 + 5, srcHeight, 0, 0, srcWidth / 2 + 5, srcHeight)
+    tempImg.remove()
+  };
+  tempImg.src = url
+  document.body.appendChild(tgt)
 }
 
 
@@ -154,6 +178,8 @@ function remove() {
     updateToggleButton()
     changeButtonsAvailability(false)
   }
+
+  storage.del('susi-snapshot')
 }
 
 
@@ -174,6 +200,7 @@ function generateHTML() {
   return /*html*/`
     <div id="susi-buttons">
       <button class="capture">Capture</button>
+      <button class="snapshot">Snapshot</button>
       <button class="toggle" disabled>Show</button>
       <button class="delete" disabled>Delete</button>
     </div>
